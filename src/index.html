@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Static React Quiz App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      .board {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="main"></div>
+
+    <!-- React & Babel via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/react-router-dom/umd/react-router-dom.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+    <!-- Main App -->
+    <script type="text/babel" data-type="module">
+      const { useState, useEffect } = React;
+
+      function getQueryVariable(variable) {
+        const query = window.location.search.substring(1);
+        const params = query.split('&').reduce((acc, pair) => {
+          const [key, value] = pair.split('=');
+          acc[key] = value;
+          return acc;
+        }, {});
+        return params[variable];
+      }
+
+      function CurrentQuestion({ question, answer, showQuestion, showAnswer, handleClick, handleClose }) {
+        if (!showQuestion) return null;
+        return (
+          <div>
+            <h2>{question}</h2>
+            {!showAnswer ? (
+              <button onClick={handleClick}>Show Answer</button>
+            ) : (
+              <p><strong>{answer}</strong></p>
+            )}
+            <button onClick={handleClose}>Close</button>
+          </div>
+        );
+      }
+
+      function Category({ categoryIndex, categoryName, questions, handleClick }) {
+        return (
+          <div>
+            <h3>{categoryName}</h3>
+            {questions.map((q, i) => (
+              <button
+                key={i}
+                disabled={q.answered}
+                onClick={() => handleClick(categoryIndex, i, q.question, q.answer)}
+              >
+                {q.question}
+              </button>
+            ))}
+          </div>
+        );
+      }
+
+      function Main({ questionSetUrl }) {
+        const [categories, setCategories] = useState([]);
+        const [currentQuestion, setCurrentQuestion] = useState('');
+        const [currentAnswer, setCurrentAnswer] = useState('');
+        const [showQuestion, setShowQuestion] = useState(false);
+        const [showAnswer, setShowAnswer] = useState(false);
+
+        useEffect(() => {
+          fetch(questionSetUrl)
+            .then((res) => res.json())
+            .then(setCategories);
+        }, [questionSetUrl]);
+
+        const handleShowQuestion = (categoryIndex, questionIndex, question, answer) => {
+          const updated = [...categories];
+          updated[categoryIndex].questions[questionIndex].answered = true;
+          setCategories(updated);
+          setCurrentQuestion(question);
+          setCurrentAnswer(answer);
+          setShowQuestion(true);
+          setShowAnswer(false);
+        };
+
+        const handleClose = () => {
+          setShowQuestion(false);
+          setShowAnswer(false);
+        };
+
+        const handleShowAnswer = () => setShowAnswer(true);
+
+        return (
+          <>
+            <CurrentQuestion
+              question={currentQuestion}
+              answer={currentAnswer}
+              showQuestion={showQuestion}
+              showAnswer={showAnswer}
+              handleClick={handleShowAnswer}
+              handleClose={handleClose}
+              imgUrl={"lol"}
+            />
+            <div className="board">
+              {categories.map((cat, i) => (
+                <Category
+                  key={i}
+                  categoryIndex={i}
+                  categoryName={cat.name}
+                  questions={cat.questions}
+                  handleClick={handleShowQuestion}
+                />
+              ))}
+            </div>
+          </>
+        );
+      }
+
+      const questionSet = getQueryVariable('questions') || 'questions1';
+      const questionUrl = `${questionSet}.json`;
+
+      const root = ReactDOM.createRoot(document.getElementById('main'));
+      root.render(<Main questionSetUrl={questionUrl} />);
+    </script>
+  </body>
+</html>
